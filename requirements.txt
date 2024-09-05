@@ -1,2 +1,11 @@
 streamlit
 groq
+langchain
+pinecone
+llama-index-llms-groq
+llama-index-core
+llama-index-embeddings-cohere
+llama-index-vector-stores-pinecone
+llama-parse
+langchain-groq
+langchain-ollama
