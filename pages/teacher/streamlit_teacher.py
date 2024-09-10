@@ -1,69 +1,23 @@
 import streamlit as st
 from pinecone import Pinecone, ServerlessSpec
-#from llama_index.embeddings.cohere import CohereEmbedding
+from langchain_pinecone import PineconeVectorStore
+from langchain_community.embeddings import CohereEmbeddings
 from langchain_groq import ChatGroq
-from langchain_ollama import OllamaEmbeddings
-import uuid
 
+import time
 
-
-
-PINECONE_API_KEY ="241a18ba-a13e-4c33-9ab0-a405c14e4a4b"
+PINECONE_API_KEY = st.secrets.PINECONE_API_KEY
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index_name = "quickstart"
-
-def handle_embedding(text_to_embed):
-    embed = OllamaEmbeddings(
-        model="llama3.1"
+embeddings = CohereEmbeddings(model="embed-english-v3.0", user_agent="langchain")
+st.session_state.index_name = "kb-teacher"
+llm = ChatGroq(
+        model="mixtral-8x7b-32768",
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=1,
+        # other params...
     )
-
-    vectors = []
-    dimension = 3
-
-    vector = embed.embed_query(text_to_embed)
-    vectors.append(vector[:dimension])
-
-    return vectors, dimension
-
-def handle_pinecone(vectors, answer, vec_dimension):
-    pc.delete_index(index_name)
-
-    if index_name not in pc.list_indexes().names():
-        pc.create_index(
-            name=index_name,
-            dimension=vec_dimension, # Replace with your model dimensions
-            metric="cosine", # Replace with your model metric
-            spec=ServerlessSpec(
-                cloud="aws",
-                region="us-east-1"
-            ) 
-        )
-
-    index = pc.Index(index_name)
-    data = []
-    vec_id = uuid.uuid4()
-
-
-    data.append({"id":f"vec_{vec_id}", "values": vectors[0], "metadata": {"answer": answer}})
-    print(data)
-    index.upsert(
-        data,
-        namespace="example-namespace1"
-    )
-
-    st.markdown("## Questão corrigida com sucesso!")
-    st.markdown("A questão foi corrigida e salva no banco de dados.")
-
-    return index
-
-#     # print(index.describe_index_stats())
-#     query_results1 = index.query(
-#     namespace="example-namespace1",
-#     vector=[1.0, 1.5],
-#     top_k=3,
-#     include_values=True
-# )
-#     print(query_results1)
 
 #form for the teacher to insert the corrected question and answer
 st.markdown("## Correção de questões")
@@ -74,9 +28,31 @@ with st.form("form"):
     submit = st.form_submit_button("Enviar")
 
 if submit == True:
-    embedded_data, vector_dimension = handle_embedding(question)
-    pc_index = handle_pinecone(embedded_data, answer, vector_dimension)
-    res = pc_index.fetch(["vec_1"])#['metadata'] # resposta
-    st.markdown(res)
-    #st.markdown(res[0]['metadata']['answer'])
-    #pc_index.fetch(["vec_1"])['values'] # pergunta embedada
+    #Salvando a questão e a resposta no banco de dados
+    index_name = st.session_state.index_name
+
+    #pc.delete_index(index_name)
+
+    if index_name not in pc.list_indexes().names():
+        index = pc.create_index(
+            name=index_name,
+            dimension=1024, # Replace with your model dimensions
+            metric="cosine", # Replace with your model metric
+            spec=ServerlessSpec(
+                cloud="aws",
+                region="us-east-1"
+            ) 
+        )
+
+    index = pc.Index(index_name)
+    while not pc.describe_index(index_name).status['ready']:  
+        time.sleep(1)
+
+    docsearch = PineconeVectorStore.from_texts(
+        texts=[question],
+        embedding=embeddings,
+        metadatas=[{"resposta":answer}],
+        index_name=index_name,
+    )
+    st.markdown("A questão foi corrigida e salva no banco de dados.")
+    time.sleep(1)
