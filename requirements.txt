@@ -9,3 +9,5 @@ llama-index-vector-stores-pinecone
 llama-parse
 langchain-groq
 langchain-ollama
+langchain-community
+langchain-pinecone
