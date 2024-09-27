@@ -2,6 +2,8 @@ import streamlit as st
 
 if "role" not in st.session_state:
     st.session_state.role = None
+    st.session_state.index_name = "kb-teacher2"
+
 
 ROLES = [None, "aluno", "professor"]
 
