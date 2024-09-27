@@ -26,15 +26,31 @@ def set_model():
 
     return client
 
-# def response_generator(client):
-#     res = client.chat.completions.create(
-#         stream = False,
-#         model = st.session_state["ai_model"],
-#         messages = [
-#             {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
-#         ]
-#     )
-#     return res
+def response_generator(client, question, data):
+    context = []
+
+    for m in st.session_state.messages:
+        context.append({"role": m["role"], "content": m["content"]})
+
+    if data:    
+        data = data[0].metadata.get("resposta")
+
+    stream = client.chat.completions.create(
+        stream = True,
+        model = st.session_state["ai_model"],
+        temperature=0.3,
+        top_p=0.5,
+        messages = [
+            {
+                "role": "system", "content": f"Você é um assistente escolar com o objetivo de ajudar alunos a sanarem suas dúvidas de forma simples e ágil, com base na resposta providenciada pelo professor. Responda exclusivamente em português brasileiro e use no máximo duas frases para responder. Utilize o contexto da conversa para recapitular perguntas já feitas. {context}. A resposta do professor está a seguir: {data}. Caso esteja vazio, responda com base no seu conhecimento."
+            },
+            {
+                "role": "user",
+                "content": f"{question}"
+            },
+        ]
+    )
+    return stream
     
 def new_chat():
     st.session_state.messages = []
@@ -48,9 +64,6 @@ def init_chat_session():
         content = "Ola, eu sou o assistente escolar do Lucas Henrichs. Pergunte-me algo!"
         st.session_state.messages.append({"role": "assistant", "content": content}) #adicionando no histórico de mensagens
         st.session_state.assistant_messages.append({"role": "assistant", "content": content}) #adicionando no histórico de mensagens do bot
-    
-    if "index_name" not in st.session_state:
-        st.session_state.index_name = "kb-teacher"
 
 def display_chat_history():
     # Display chat messages from history on app rerun
@@ -80,6 +93,14 @@ def handle_page():
         st.markdown("## 🧠 Escolha a disciplina 🧠")
         st.selectbox("Disciplinas", ["História"])
         st.button(("Iniciar novo chat"), on_click=new_chat)
+
+def write_response(client,data,question):
+
+    stream = response_generator(client, question, data)
+    for chunk in stream:
+        content = chunk.choices[0].delta.content
+        if content is not None:
+            yield content
         
 
 def get_chatbot_response(client):   
@@ -87,42 +108,12 @@ def get_chatbot_response(client):
 
     question = st.session_state.user_messages[-1]["content"]
 
-    prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-                "Voce é um assistente escolar, voltado para o ensino medio. Responda apenas em portugues brasileiro. Use no máximo uma frase para gerar a resposta, você JAMAIS deve ultrapassar uma frase. Use este dado de consulta para basear sua resposta: {data}."
-        ),
-        ("human", "{input}"),
-    ]
-    )
-
-    chain = prompt | llm
-
     data = docsearch.search(question,search_type='similarity_score_threshold',k=1, score_threshold=0.8)
 
-    if "No relevant docs were retrieved" in data or data == []:
-        with st.chat_message("assistant"):
-            res = "Desculpe, a resposta para essa pergunta nao foi encontrada na base de dados. Peça uma revisão ao professor."
-            st.markdown(res)
-        st.session_state.messages.append({"role": "assistant", "content": res})
-        st.session_state.assistant_messages.append({"role": "assistant", "content": res})
-        ai_response = None
-    else:
-        ai_response = chain.invoke(
-            {
-                "input": question,
-                "data": data[0].metadata['resposta']
-            }
-        )
-        ai_response = ai_response.content
-        
-        with st.chat_message("assistant"):
-            st.markdown(ai_response)
+    with st.chat_message("assistant"):
+        ai_response =  st.write_stream(write_response(client,data,question))
         st.session_state.messages.append({"role": "assistant", "content": ai_response}) #adicionando no histórico de mensagens geral
         st.session_state.assistant_messages.append({"role": "assistant", "content": ai_response})#adicionando no histórico de mensagens do bot
-
-    return ai_response
 
 def main():
 
