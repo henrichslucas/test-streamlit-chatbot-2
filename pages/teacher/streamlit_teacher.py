@@ -9,7 +9,6 @@ import time
 PINECONE_API_KEY = st.secrets.PINECONE_API_KEY
 pc = Pinecone(api_key=PINECONE_API_KEY)
 embeddings = CohereEmbeddings(model="embed-english-v3.0", user_agent="langchain")
-st.session_state.index_name = "kb-teacher"
 llm = ChatGroq(
         model="mixtral-8x7b-32768",
         temperature=0,
