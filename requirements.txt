@@ -8,4 +8,4 @@ llama-index-embeddings-cohere
 llama-index-vector-stores-pinecone
 langchain-community
 langchain-pinecone
-pypdf
+PyPDF2
