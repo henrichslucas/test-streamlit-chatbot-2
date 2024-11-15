@@ -3,7 +3,8 @@ import hmac
 
 if "role" not in st.session_state:
     st.session_state.role = None
-    st.session_state.index_name = "kb-teacher2"
+    # st.session_state.index_name = "tcc-vectorstore-cohere"
+    st.session_state.index_name = "tcc-vectorstore-huggingface"
     
 st.session_state.TEACHER_PASSWD = ""
 
@@ -21,40 +22,6 @@ def logout():
     for key in st.session_state.keys():
         st.session_state.pop(key)
     st.rerun()
-
-def check_password() -> bool:
-    """
-    Checks if the user entered the correct password.
-
-    Returns:
-        bool: True if the password is correct, False otherwise.
-    """
-    def password_entered() -> None:
-        """Validates the entered password and updates the session state."""
-        if hmac.compare_digest(st.session_state["TEACHER_PASSWD"], st.secrets["TEACHER_PASSWD"]):
-            st.session_state["password_correct"] = True
-            del st.session_state["TEACHER_PASSWD"]
-        else:
-            st.session_state["password_correct"] = False
-
-    if st.session_state.get("password_correct", False):
-        return True
-
-    st.markdown("# 🖥️🔒 Area do professor")
-    st.markdown("Essa página é exclusiva dos professores.")
-
-    st.text_input(
-        "Insira o código de segurança:", type="password", on_change=password_entered, key="TEACHER_PASSWD"
-    )
-
-    if "password_correct" not in st.session_state:
-        return False
-
-    if not st.session_state["password_correct"]:
-        st.error("Incorrect password!")
-        return False
-
-    return True
 
 def main():
     role = st.session_state.role
@@ -94,15 +61,12 @@ def main():
 
     page_dict = {}
     if st.session_state.role in ["professor"]:
-        if not check_password():
-            st.stop()
-        else:
-            page_dict["teacher"] = teacher_pages
+        page_dict["Professor"] = teacher_pages
     if st.session_state.role in ["aluno"]:
-        page_dict["student"] = student_pages
-
+        page_dict["Aluno"] = student_pages
+        
     if len(page_dict) > 0:
-        pg = st.navigation({"Account": account_pages} | page_dict)
+        pg = st.navigation( pages={"":account_pages} | page_dict, )
     else:
         pg = st.navigation([st.Page(login)])
         
