@@ -2,11 +2,7 @@ streamlit
 groq
 langchain
 pinecone
-llama-index-llms-groq
-llama-index-core
-llama-index-embeddings-cohere
-llama-index-vector-stores-pinecone
 langchain-community
-langchain-pinecone
+langchain-pinecone == 0.2.0
 sentence-transformers
 PyPDF2
