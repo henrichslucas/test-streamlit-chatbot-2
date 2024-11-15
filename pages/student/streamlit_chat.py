@@ -18,19 +18,10 @@ def set_model():
 
     return client
 
-
-def sort_question_answer(data):
-    full_data = []
-
-    for d in data:
-        full_data.append(str(d))
-  
-    return full_data
-
 def response_generator(client, question, data):
     context = []
 
-    template = sort_question_answer(data)
+    template = data
 
     for m in st.session_state.messages:
         context.append({"role": m["role"], "content": m["content"]})
@@ -42,7 +33,7 @@ def response_generator(client, question, data):
         top_p=0.2,
         messages = [
             {
-                "role": "system", "content": f"Você é um assistente escolar com o objetivo de ajudar alunos a sanarem suas dúvidas de forma simples e ágil, com base na resposta providenciada pelo professor. A resposta SEMPRE deve ser colocada entre as tags <response> </response> e nunca pode passar de duas frases. Responda exclusivamente em português brasileiro e NUNCA PASSE de uma frase na resposta. Existe uma regra primordial para gerar as respostas: Ela sempre tem que estar alinhada com o gabarito oficial fornecido pelo professor. Esse gabarito tem diversas questões sorteadas, entao, selecione apenas a questão e resposta relevantes. Caso nao tenha gabarito, diga 'Desculpe, o gabarito ainda não tem essa pergunta corrigida. Solicite ao seu professor!'. O gabarito oficial está a seguir: {template}. Para recapitular perguntas feitas anteriormente, consulte o histórico de mensagens a seguir: {context}."
+                "role": "system", "content": f"Você é um assistente escolar com o objetivo de ajudar alunos a sanarem suas dúvidas de forma simples e ágil, com base na resposta providenciada pelo professor. A resposta SEMPRE deve ser colocada entre as tags <response> </response> e nunca pode passar de duas frases. Responda exclusivamente em português brasileiro e NUNCA PASSE de uma frase na resposta. Existe uma regra primordial para gerar as respostas: Ela sempre tem que estar alinhada com o gabarito oficial fornecido pelo professor. Esse gabarito tem diversas questões sorteadas, entao, selecione apenas a questão e resposta relevantes. Caso nao tenha gabarito, diga 'Desculpe, o gabarito ainda não tem essa pergunta corrigida. Solicite ao seu professor!'. O gabarito oficial está a seguir: {template}. Caso o aluno pergunte quais as questões que estao disppniveis no gabarito, voce pode ler o gabarito e dizer quais as questoes presentes nele. Para recapitular perguntas feitas anteriormente, consulte o histórico de mensagens a seguir: {context}."
             },
             {
                 "role": "user",
@@ -112,7 +103,7 @@ def get_chatbot_response(client):
 
     question = st.session_state.user_messages[-1]["content"]
 
-    raw_data = docsearch.search(question,search_type='similarity_score_threshold',k=1, score_threshold=0.7)
+    raw_data = docsearch.search(question,search_type='similarity_score_threshold',k=10, score_threshold=0.7)
     if len(raw_data) > 0:
         data = raw_data[0].page_content
     else:
