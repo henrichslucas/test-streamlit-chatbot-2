@@ -6,7 +6,7 @@ Um chatbot interativo movido a inteligência artificial generativa!
 
 ### Como executar na sua própria maquina:
 
-1. Istale as bibliotecas
+1. Instale as bibliotecas
 
    ```
    $ pip install -r requirements.txt
