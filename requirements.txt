@@ -8,4 +8,5 @@ llama-index-embeddings-cohere
 llama-index-vector-stores-pinecone
 langchain-community
 langchain-pinecone
+sentence-transformers
 PyPDF2
