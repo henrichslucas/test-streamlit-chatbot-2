@@ -263,9 +263,9 @@ def main():
         with container:
             if len(index_list) != 0 or index.describe_index_stats().to_dict()['total_vector_count'] != 0:
                 for id in index_list:
-                    reg = index.query(id=id, top_k=1, include_metadata=True)['matches'][0]['metadata']['text']
-                    if reg is not None:
-
+                    reg = index.query(id=id, top_k=1, include_metadata=True)['matches']
+                    if reg is not None or len(reg) != 0:
+                        reg = reg[0]['metadata']['text']
                         st.markdown(f"""
                             #### código do gabarito: 
                             {id}   
@@ -276,7 +276,6 @@ def main():
                         """)
 
                         st.divider()
-            else:
-                print("No documents saved")
+
 
 main()
