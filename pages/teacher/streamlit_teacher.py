@@ -276,6 +276,8 @@ def main():
                         """)
 
                         st.divider()
+                    else:
+                        st.info("Clique novamente para confirmar a reinicialização do repositório.")
 
 
 main()
