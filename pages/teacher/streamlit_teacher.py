@@ -15,7 +15,6 @@ LLAMA_API_KEY = st.secrets.LLAMA_API_KEY
 PINECONE_API_KEY = st.secrets.PINECONE_API_KEY
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
-#embeddings = CohereEmbeddings(model="embed-english-v3.0", user_agent="langchain")
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-mpnet-base-v2"
 )
@@ -64,8 +63,8 @@ def init_index():
             # Cohere index
             index = pc.create_index(
                 name=index_name,
-                dimension=1024, # Replace with your model dimensions
-                metric="cosine", # Replace with your model metric
+                dimension=1024,
+                metric="cosine", 
                 spec=ServerlessSpec(
                     cloud="aws",
                     region="us-east-1"
@@ -75,8 +74,8 @@ def init_index():
             # HuggingFace index
             index = pc.create_index(
                 name=index_name,
-                dimension=768, # Replace with your model dimensions
-                metric="cosine", # Replace with your model metric
+                dimension=768, 
+                metric="cosine",
                 spec=ServerlessSpec(
                     cloud="aws",
                     region="us-east-1"
@@ -157,6 +156,8 @@ def handle_form(submit, index_name, index):
 
         st.success("A questão foi corrigida e salva no banco de dados.")
 
+        st.rerun(scope="app")
+
 def upload_doc(embeddings, index, index_name):
     with st.form("upload_form", clear_on_submit=True):
 
@@ -189,7 +190,7 @@ def upload_doc(embeddings, index, index_name):
         if file_submitted and (document_binary is not None):
         
             document = process_document(document_binary)
-            
+
             for doc in document:
                 for item in doc:
                     vec_store = PineconeVectorStore.from_texts(
@@ -212,31 +213,55 @@ def upload_doc(embeddings, index, index_name):
                 st.success("Repositório de perguntas carregado com sucesso!")
                 time.sleep(5)
             placeholder.empty()
+            st.rerun(scope="app")
 
             return True
-                
-        else:
-            print("No document uploaded")
-            return False
-
-def reset_index(index, index_name):
+def reset_index(index, index_name, index_list):
     placeholder = st.empty()
     if index.describe_index_stats().to_dict()['total_vector_count']>0:
-        delete_response = index.delete(delete_all=True)
+        delete_response = index.delete(ids=index_list)
         
         with placeholder:   
-            st.warning("Repositório de perguntas reiniciando...")
+            st.warning("Reiniciando repositório de perguntas ...")
             while index.describe_index_stats().to_dict()['total_vector_count'] != 0:
                 time.sleep(1)
             st.success("Repositório de perguntas reiniciado com sucesso!")
             time.sleep(5)
         placeholder.empty()
-        index = pc.Index(index_name)
     else:
         with placeholder:
             st.warning("Repositório de perguntas já está vazio.")
             time.sleep(5)
         placeholder.empty()
+
+def delete_template(index, index_name, index_list):
+    placeholder = st.empty()
+    current_count = index.describe_index_stats().to_dict()['total_vector_count']
+    if current_count == 0:  
+        with placeholder.container():
+            st.warning("Repositório de perguntas está vazio.")
+        return False
+    
+    print(current_count)
+    with st.form("delete_form", clear_on_submit=False):
+        template_id = st.selectbox("Selecione o gabarito para remover", index_list)
+        submit = st.form_submit_button("Remover gabarito")
+
+    if submit:
+        with placeholder.container():
+            st.warning("Removendo gabarito...")
+        delete_response = index.delete(ids=[template_id])
+        while index.describe_index_stats().to_dict()['total_vector_count'] == current_count:
+            time.sleep(1)
+        
+        placeholder.empty()
+
+        with placeholder.container():
+            st.success("Gabarito removido com sucesso!")
+        time.sleep(5)
+        placeholder.empty()
+
+        st.rerun(scope="app")
     
 def main():
     if not check_password():
@@ -244,19 +269,21 @@ def main():
     else:
         index, index_name = init_index()
 
-        with st.sidebar:
-            st.button(("Reiniciar repositório de perguntas"), on_click=reset_index, args=(index, index_name))
-
-        submit = False
-        handle_form(submit, index_name, index)
-
-        upload_doc(embeddings, index, index_name)
-
-        # Mostrando conteúdo do repositório
         index_list = []
         for ids in index.list():
             for id in ids:
                 index_list.append(id)
+
+        submit = False
+        with st.sidebar:
+            st.button(("Esvaziar repositório de gabaritos"), on_click=reset_index, args=(index, index_name, index_list))
+
+            with st.popover(("Remover gabarito por ID")):
+                delete_template(index, index_name, index_list)
+
+        handle_form(submit, index_name, index)
+
+        upload_doc(embeddings, index, index_name)
 
         container = st.container(border=True)
         container.write("Documentos salvos:")
@@ -274,10 +301,10 @@ def main():
                             #### gabarito: 
                             {reg}
                         """)
-
-                        st.divider()
+                        if id != index_list[-1]:
+                            st.divider()
                     else:
-                        st.info("Clique novamente para confirmar a reinicialização do repositório.")
+                        st.warning("Clique novamente para confirmar a reinicialização do repositório.")
 
 
 main()
