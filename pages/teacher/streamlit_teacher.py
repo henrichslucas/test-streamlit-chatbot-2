@@ -63,8 +63,8 @@ def init_index():
             # Cohere index
             index = pc.create_index(
                 name=index_name,
-                dimension=1024, # Replace with your model dimensions
-                metric="cosine", # Replace with your model metric
+                dimension=1024,
+                metric="cosine", 
                 spec=ServerlessSpec(
                     cloud="aws",
                     region="us-east-1"
@@ -74,8 +74,8 @@ def init_index():
             # HuggingFace index
             index = pc.create_index(
                 name=index_name,
-                dimension=768, # Replace with your model dimensions
-                metric="cosine", # Replace with your model metric
+                dimension=768, 
+                metric="cosine",
                 spec=ServerlessSpec(
                     cloud="aws",
                     region="us-east-1"
@@ -269,7 +269,6 @@ def main():
     else:
         index, index_name = init_index()
 
-        # Mostrando conteúdo do repositório
         index_list = []
         for ids in index.list():
             for id in ids:
@@ -293,7 +292,6 @@ def main():
                 for id in index_list:
                     reg = index.query(id=id, top_k=1, include_metadata=True)['matches']
                     if reg is not None or len(reg) != 0:
-                        print(reg)
                         reg = reg[0]['metadata']['text']
                         st.markdown(f"""
                             #### código do gabarito: 
